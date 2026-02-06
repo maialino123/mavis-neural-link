@@ -1,49 +1,50 @@
 const GATEWAY_URL = "wss://bot.ecomatehome.com";
-const RELAY_URL = "wss://relay.ecomatehome.com/extension";
 const TOKEN = "b5b2560e5484e01615681d30470fac5d82d792d849d230ce";
 
-let chatWs = null;
-let relayWs = null;
+let ws = null;
+let reqId = 1;
 
-function connectChat() {
-    chatWs = new WebSocket(GATEWAY_URL);
-    chatWs.onopen = () => {
-        document.getElementById('status-dot').classList.add('online');
-        chatWs.send(JSON.stringify({ kind: "auth", token: TOKEN }));
+function connect() {
+    ws = new WebSocket(GATEWAY_URL);
+    
+    ws.onopen = () => {
+        // Step 1: Protocol Connect (Handshake)
+        sendRequest("connect", {
+            minProtocol: 3,
+            maxProtocol: 3,
+            client: { id: "mavis-extension", version: "1.2.0", platform: "browser", mode: "operator" },
+            role: "operator",
+            scopes: ["operator.read", "operator.write"],
+            auth: { token: TOKEN }
+        });
     };
-    chatWs.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        if (data.kind === "message") addMessage(data.text, 'mavis');
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log("In:", data);
+        
+        // Handle handshake success
+        if (data.type === "res" && data.payload?.type === "hello-ok") {
+            document.getElementById('status-dot').classList.add('online');
+            addMessage("Neural Link Established.", "mavis");
+        }
+        
+        // Handle incoming messages from Mavis
+        if (data.type === "event" && data.event === "agent.message") {
+            addMessage(data.payload.text, 'mavis');
+        }
     };
-    chatWs.onclose = () => {
+
+    ws.onclose = () => {
         document.getElementById('status-dot').classList.remove('online');
-        setTimeout(connectChat, 3000);
+        setTimeout(connect, 3000);
     };
 }
 
-function connectRelay() {
-    relayWs = new WebSocket(RELAY_URL);
-    relayWs.onopen = () => {
-        console.log("Relay connected");
-        relayWs.send(JSON.stringify({ kind: "auth", token: TOKEN }));
-    };
-    relayWs.onclose = () => setTimeout(connectRelay, 3000);
+function sendRequest(method, params) {
+    const id = `req-${reqId++}`;
+    ws.send(JSON.stringify({ type: "req", id, method, params }));
 }
-
-document.getElementById('send').onclick = () => {
-    const input = document.getElementById('input');
-    const text = input.value;
-    if (text && chatWs && chatWs.readyState === WebSocket.OPEN) {
-        // Gửi dạng "userMessage" để Gateway xử lý như một tin nhắn bình thường
-        chatWs.send(JSON.stringify({
-            kind: "userMessage",
-            text: text,
-            label: "main" 
-        }));
-        addMessage(text, 'boss');
-        input.value = '';
-    }
-};
 
 function addMessage(text, role) {
     const chat = document.getElementById('chat');
@@ -54,5 +55,18 @@ function addMessage(text, role) {
     chat.scrollTop = chat.scrollHeight;
 }
 
-connectChat();
-connectRelay();
+document.getElementById('send').onclick = () => {
+    const input = document.getElementById('input');
+    const text = input.value;
+    if (text && ws && ws.readyState === WebSocket.OPEN) {
+        // Step 2: Send User Message via Protocol
+        sendRequest("agent.chat", {
+            message: text,
+            label: "main"
+        });
+        addMessage(text, 'boss');
+        input.value = '';
+    }
+};
+
+connect();
