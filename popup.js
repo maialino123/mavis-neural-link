@@ -12,9 +12,9 @@ function connect() {
         sendRequest("connect", {
             minProtocol: 3,
             maxProtocol: 3,
-            client: { id: "openclaw-client", version: "1.2.3", platform: "browser", mode: "operator" },
+            client: { id: "openclaw-control-ui", version: "1.2.3", platform: "browser", mode: "ui" },
             role: "operator",
-            scopes: ["operator.read", "operator.write"],
+            scopes: ["operator.read", "operator.write", "operator.admin"],
             auth: { token: TOKEN }
         });
     };
