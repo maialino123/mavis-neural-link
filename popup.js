@@ -34,7 +34,12 @@ document.getElementById('send').onclick = () => {
     const input = document.getElementById('input');
     const text = input.value;
     if (text && chatWs && chatWs.readyState === WebSocket.OPEN) {
-        chatWs.send(JSON.stringify({ kind: "agentTurn", message: text }));
+        // Gửi dạng "userMessage" để Gateway xử lý như một tin nhắn bình thường
+        chatWs.send(JSON.stringify({
+            kind: "userMessage",
+            text: text,
+            label: "main" 
+        }));
         addMessage(text, 'boss');
         input.value = '';
     }
