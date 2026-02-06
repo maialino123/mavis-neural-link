@@ -12,7 +12,7 @@ function connect() {
         sendRequest("connect", {
             minProtocol: 3,
             maxProtocol: 3,
-            client: { id: "mavis-extension", version: "1.2.0", platform: "browser", mode: "operator" },
+            client: { id: "openclaw-client", version: "1.2.3", platform: "browser", mode: "operator" },
             role: "operator",
             scopes: ["operator.read", "operator.write"],
             auth: { token: TOKEN }
